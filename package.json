@@ -1,0 +1,32 @@
+{
+  "name": "hand-gesture-particle-system",
+  "version": "1.0.0",
+  "description": "Interactive particle system controlled by hand gestures using Three.js and MediaPipe",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 8000 -o",
+    "dev": "npx http-server -p 8000 -c-1"
+  },
+  "keywords": [
+    "three.js",
+    "mediapipe",
+    "hand-gesture",
+    "particles",
+    "webgl",
+    "interactive",
+    "3d",
+    "visualization"
+  ],
+  "author": "abyxx222",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abyxx222/hand-gesture-particle-system.git"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
