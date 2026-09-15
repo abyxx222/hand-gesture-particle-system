@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand Gesture Particle System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e27;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            z-index: 10;
+            display: none;
+        }
+
+        /* UI Panel */
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid #00ff88;
+            border-radius: 12px;
+            padding: 20px;
+            width: 300px;
+            z-index: 100;
+            box-shadow: 0 8px 32px rgba(0, 255, 136, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #00ff88;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 8px;
+            color: #00ffff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .particle-shape-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .shape-btn {
+            padding: 10px;
+            border: 2px solid #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .shape-btn:hover {
+            background: rgba(0, 255, 136, 0.3);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .shape-btn.active {
+            background: #00ff88;
+            color: #0a0e27;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
+        }
+
+        .color-picker-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #colorPicker {
+            width: 50px;
+            height: 40px;
+            border: 2px solid #00ff88;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .color-value {
+            font-size: 12px;
+            color: #00ffff;
+            font-family: 'Courier New', monospace;
+            flex: 1;
+        }
+
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #00ff88, #00ffff);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #00ff88;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.7);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #00ff88;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.7);
+        }
+
+        .slider-value {
+            text-align: center;
+            font-size: 11px;
+            color: #00ffff;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            background: rgba(0, 255, 136, 0.3);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .info-text {
+            font-size: 11px;
+            color: #00ffaa;
+            margin-top: 10px;
+            padding: 8px;
+            background: rgba(0, 255, 170, 0.05);
+            border-left: 2px solid #00ffaa;
+            border-radius: 4px;
+        }
+
+        /* Gesture Indicator */
+        #gesture-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 14px;
+            z-index: 100;
+            min-width: 150px;
+        }
+
+        .gesture-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .gesture-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ff0055;
+            animation: pulse 1s infinite;
+        }
+
+        .gesture-dot.active {
+            background: #00ff88;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Stats */
+        #stats {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-size: 12px;
+            z-index: 100;
+            font-family: 'Courier New', monospace;
+            color: #00ffff;
+        }
+
+        .stat-line {
+            margin: 3px 0;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <video id="video"></video>
+
+    <!-- Stats Panel -->
+    <div id="stats">
+        <div class="stat-line">FPS: <span id="fps">0</span></div>
+        <div class="stat-line">Particles: <span id="particle-count">0</span></div>
+        <div class="stat-line">Hand Open: <span id="hand-open">No</span></div>
+    </div>
+
+    <!-- Gesture Indicator -->
+    <div id="gesture-indicator">
+        <div class="gesture-status">
+            <div class="gesture-dot" id="gesture-dot"></div>
+            <span id="gesture-text">Initializing...</span>
+        </div>
+    </div>
+
+    <!-- UI Panel -->
+    <div id="ui-panel">
+        <div class="panel-title">🎨 Particle Control</div>
+
+        <!-- Particle Shape Selection -->
+        <div class="control-group">
+            <div class="control-label">Particle Shape</div>
+            <div class="particle-shape-grid">
+                <button class="shape-btn active" data-shape="cube">Cube</button>
+                <button class="shape-btn" data-shape="sphere">Sphere</button>
+                <button class="shape-btn" data-shape="heart">❤️ Heart</button>
+                <button class="shape-btn" data-shape="galaxy">🌌 Galaxy</button>
+                <button class="shape-btn" data-shape="saturn">🪐 Saturn</button>
+                <button class="shape-btn" data-shape="flower">🌸 Flower</button>
+            </div>
+        </div>
+
+        <!-- Color Picker -->
+        <div class="control-group">
+            <div class="control-label">Particle Color</div>
+            <div class="color-picker-container">
+                <input type="color" id="colorPicker" value="#00ff88">
+                <span class="color-value" id="colorValue">#00ff88</span>
+            </div>
+        </div>
+
+        <!-- Scale Control -->
+        <div class="control-group">
+            <div class="control-label">Scale</div>
+            <div class="slider-container">
+                <input type="range" id="scaleSlider" min="0.5" max="5" step="0.1" value="1.5">
+                <div class="slider-value"><span id="scaleValue">1.5</span>x</div>
+            </div>
+        </div>
+
+        <!-- Expansion Speed -->
+        <div class="control-group">
+            <div class="control-label">Expansion Speed</div>
+            <div class="slider-container">
+                <input type="range" id="expansionSlider" min="0.1" max="2" step="0.1" value="0.5">
+                <div class="slider-value"><span id="expansionValue">0.5</span>x</div>
+            </div>
+        </div>
+
+        <!-- Particle Count -->
+        <div class="control-group">
+            <div class="control-label">Particle Count</div>
+            <div class="slider-container">
+                <input type="range" id="countSlider" min="100" max="5000" step="100" value="1000">
+                <div class="slider-value"><span id="countValue">1000</span></div>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="button-group">
+            <button class="btn" id="resetBtn">Reset</button>
+            <button class="btn" id="fullscreenBtn">Fullscreen</button>
+        </div>
+
+        <div class="info-text">
+            ✋ Open hand to expand particles
+            <br>✊ Close hand to scale down
+        </div>
+    </div>
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+    <!-- App Scripts -->
+    <script src="js/particleSystem.js"></script>
+    <script src="js/gestureDetector.js"></script>
+    <script src="js/uiController.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
