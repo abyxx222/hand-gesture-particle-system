@@ -39,8 +39,8 @@ def index_markdown(payload: IndexRequest) -> dict[str, int]:
 
 @app.post("/api/index/path")
 def index_path(payload: IndexPathRequest) -> dict[str, int]:
-    target = settings.notes_path if payload.path is None else (settings.notes_path / payload.path).resolve()
     root = settings.notes_path.resolve()
+    target = root if payload.path is None else (root / payload.path).resolve()
     if target != root and root not in target.parents:
         raise HTTPException(status_code=400, detail="path escapes notes root")
     if not target.exists():
