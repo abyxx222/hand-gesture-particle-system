@@ -1,6 +1,6 @@
 import json
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from .chunking import chunk_markdown
 from .config import Settings
@@ -42,8 +42,17 @@ def index_path(payload: IndexPathRequest) -> dict[str, int]:
     target = settings.notes_path if payload.path is None else (settings.notes_path / payload.path).resolve()
     root = settings.notes_path.resolve()
     if target != root and root not in target.parents:
-        raise ValueError("path escapes notes root")
-    count = index_notes(target, index)
+        raise HTTPException(status_code=400, detail="path escapes notes root")
+    if not target.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Notes directory does not exist: {root}. Create it and add .md files.",
+        )
+    try:
+        count = index_notes(target, index)
+    except (OSError, UnicodeError, ValueError) as exc:
+        logger.exception("failed to index notes from %s", target)
+        raise HTTPException(status_code=500, detail=f"Unable to index notes: {exc}") from exc
     return {"chunks": count}
 
 

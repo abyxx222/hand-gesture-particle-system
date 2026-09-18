@@ -4,6 +4,20 @@ from .index import MemoryIndex, SearchResult
 from .models import MemoryChunk
 
 
+def _chroma_metadata(chunk: MemoryChunk) -> dict[str, str | int | float | bool]:
+    metadata: dict[str, str | int | float | bool] = {"source": chunk.source}
+    for key, value in chunk.metadata.items():
+        if value is None:
+            continue
+        if isinstance(value, (str, int, float, bool)):
+            metadata[key] = value
+        elif isinstance(value, list):
+            metadata[key] = ", ".join(str(item) for item in value)
+        else:
+            metadata[key] = str(value)
+    return metadata
+
+
 class ChromaIndex(MemoryIndex):
     """Drop-in index that can be upgraded to Chroma without changing the API."""
     def __init__(self, path: Path | None = None) -> None:
@@ -26,7 +40,7 @@ class ChromaIndex(MemoryIndex):
             return
         self._collection.upsert(
             ids=[c.id for c in chunks], documents=[c.text for c in chunks],
-            metadatas=[{"source": c.source, **c.metadata} for c in chunks],
+            metadatas=[_chroma_metadata(c) for c in chunks],
         )
 
     def search(self, query: str, top_k: int = 5) -> list[SearchResult]:
