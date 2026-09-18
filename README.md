@@ -192,6 +192,46 @@ Contributions are welcome! Feel free to:
 - Optimize performance
 - Report bugs and suggest features
 
+## 🧠 Personal AI Second Brain
+
+The original particle demo remains available at the repository root. A production-oriented,
+optional-service second brain is provided alongside it:
+
+```
+backend/
+  second_brain/       # typed FastAPI API, chunking, embeddings, RAG, tools and memory
+  tests/              # offline tests (mock provider/index)
+frontend/             # Vite + vanilla Three.js galaxy UI
+```
+
+### Run locally
+
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+pip install -r backend/requirements.txt
+uvicorn second_brain.main:app --app-dir backend --reload
+
+cd frontend
+npm install
+npm run dev
+```
+
+Copy `backend/.env.example` to `.env` to configure paths and an optional provider.
+The default mock embedding/provider keeps tests and development fully offline:
+
+```bash
+pytest backend/tests
+cd frontend && npm run build
+```
+
+The API exposes `/api/index`, `/api/index/path`, `/api/ask`, `/api/ask/stream` (SSE), `/api/graph`,
+`/api/tools/execute`, `/api/voice`, and `/api/personality`. Chroma and commercial
+LLM SDKs are optional adapters; `ChromaIndex` is selected by default and falls
+back to the in-memory index when Chroma is not installed. Set `AI_PROVIDER` to
+`openai`, `anthropic`, or `grok` and provide the corresponding API key; those
+providers make real model calls, while injected clients enable offline tests.
+
 ## 🎉 Credits
 
 - Three.js team for amazing 3D graphics library
