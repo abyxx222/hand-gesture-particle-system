@@ -39,7 +39,7 @@ class GraphResponse(BaseModel):
 
 
 class ToolRequest(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=100)
     arguments: dict[str, Any] = Field(default_factory=dict)
     confirmed: bool = False
 
@@ -55,6 +55,8 @@ class ToolSchema(BaseModel):
     name: str
     requires_confirmation: bool
     description: str = ""
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    confirmation_details: str | None = None
 
 
 class MemoryWriteRequest(BaseModel):

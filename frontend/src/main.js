@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import './style.css';
 
 const $ = (s) => document.querySelector(s);
-const state = { nodes: [], edges: [], selected: null, conversationId: crypto.randomUUID(), recognition: null, speaking: false };
+const state = { nodes: [], edges: [], selected: null, conversationId: crypto.randomUUID(), recognition: null, speaking: false, toolSchemas: [] };
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, .1, 100);
 camera.position.set(0, 0, 9);
@@ -45,6 +45,7 @@ async function loadGraph() { try { drawGraph(await api('/api/graph')); $('#healt
 async function loadConfig() {
   try { const [p, personality, tools] = await Promise.all([api('/api/provider'), api('/api/personality'), api('/api/tools')]);
     $('#provider').value = p.provider; $('#model').value = p.model; $('#personality').textContent = `${personality.name}: ${personality.system_prompt}`;
+    state.toolSchemas = tools;
     $('#toolList').innerHTML = tools.map(t => `<button class="tool" data-tool="${escapeHtml(t.name)}">${escapeHtml(t.name)}${t.requires_confirmation ? ' · approval' : ''}</button>`).join('');
     document.querySelectorAll('.tool').forEach(b => b.onclick = () => requestTool(b.dataset.tool));
   } catch { $('#personality').textContent = 'Configuration unavailable'; }
@@ -68,7 +69,22 @@ function startVoice() {
   recognition.onresult = (event) => { const transcript = [...event.results].map(r => r[0].transcript).join(''); $('#query').value = transcript; if (event.results[event.results.length - 1].isFinal && !$('#wake').checked) ask(); };
   recognition.onend = () => { state.recognition = null; if ($('#wake').checked) startVoice(); }; recognition.onerror = () => { state.recognition = null; }; state.recognition = recognition; recognition.start(); $('#streamState').textContent = $('#wake').checked ? 'WAKE LISTENING' : 'LISTENING · SPEAK NOW';
 }
-async function requestTool(name) { $('#approval').classList.remove('hidden'); $('#approvalText').textContent = `Jarvis wants to run “${name}”. Review and approve this action.`; $('#approve').onclick = async () => { $('#approval').classList.add('hidden'); try { const result = await api('/api/tools/execute', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ name, arguments:{}, confirmed:true }) }); $('#streamState').textContent = result.ok ? 'TOOL COMPLETE' : `TOOL ERROR · ${result.error}`; } catch (e) { $('#streamState').textContent = `TOOL ERROR · ${e.message}`; } }; }
+async function requestTool(name) {
+  const schema = state.toolSchemas.find(t => t.name === name) || { arguments: {} };
+  const fields = Object.entries(schema.arguments || {});
+  $('#approvalText').textContent = schema.confirmation_details || schema.description || `Run “${name}”.`;
+  $('#toolArguments').innerHTML = fields.map(([key, spec]) =>
+    `<label class="tool-argument">${escapeHtml(key)}${spec.required ? ' *' : ''}<input data-arg="${escapeHtml(key)}" placeholder="${escapeHtml(spec.default ?? '')}" value="${escapeHtml(spec.default ?? '')}"></label>`).join('');
+  $('#approval').classList.remove('hidden');
+  $('#approve').onclick = async () => {
+    const arguments_ = Object.fromEntries([...document.querySelectorAll('#toolArguments [data-arg]')]
+      .map(input => [input.dataset.arg, input.value]).filter(([, value]) => value !== ''));
+    $('#approval').classList.add('hidden');
+    try { const result = await api('/api/tools/execute', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ name, arguments: arguments_, confirmed: true }) });
+      $('#streamState').textContent = result.ok ? 'TOOL COMPLETE' : `TOOL ERROR · ${result.error}`;
+    } catch (e) { $('#streamState').textContent = `TOOL ERROR · ${e.message}`; }
+  };
+}
 $('#ask').onclick = ask; $('#query').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); } }); $('#voice').onclick = startVoice; $('#settingsToggle').onclick = () => $('#settings').classList.toggle('hidden'); $('#deny').onclick = () => $('#approval').classList.add('hidden');
 $('#wake').onchange = () => $('#wake').checked ? startVoice() : stopVoice();
 $('#saveProvider').onclick = async () => { try { const result = await api('/api/provider', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ provider:$('#provider').value, model:$('#model').value }) }); $('#streamState').textContent = `MODEL ACTIVE · ${result.provider}/${result.model}`; } catch (e) { $('#streamState').textContent = `MODEL ERROR · ${e.message}`; } };

@@ -5,6 +5,7 @@ from second_brain.config import Settings
 from second_brain.memory import MemoryStore
 from second_brain.providers import AnthropicProvider, MockProvider, OpenAIProvider, create_provider
 from second_brain.ingest import index_notes
+from second_brain.tools import AppArgs, MockSmsProvider, SearchArgs, ToolRegistry, launch_app, register_builtin_tools, search_url, send_sms
 from pathlib import Path
 
 
@@ -108,3 +109,35 @@ def test_memory_write_and_tool_schema_endpoints():
     assert written.json()["chunks"] == 1
     schemas = client.get("/api/tools").json()
     assert any(item["name"] == "safe" and item["requires_confirmation"] for item in schemas)
+
+
+def test_search_url_validation(monkeypatch):
+    opened = []
+    monkeypatch.setattr("second_brain.tools.webbrowser.open", lambda url, new=0: opened.append(url) or True)
+    result = search_url("lo-fi & jazz", "music")
+    assert result["url"].startswith("https://open.spotify.com/search/")
+    assert "lo-fi" in opened[0]
+    try:
+        SearchArgs(query="x", service="other")
+        assert False
+    except ValueError:
+        pass
+
+
+def test_app_allowlist():
+    try:
+        launch_app("cmd")
+        assert False
+    except (ValueError, RuntimeError):
+        pass
+
+
+def test_sms_dry_run_and_confirmation():
+    registry = ToolRegistry(Path("."))
+    register_builtin_tools(registry, MockSmsProvider())
+    blocked = registry.execute("send_sms", {"to": "+15551234567", "body": "hello"})
+    assert blocked.requires_confirmation
+    sent = registry.execute("send_sms", {"to": "+15551234567", "body": "hello"}, confirmed=True)
+    assert sent.ok and sent.output["dry_run"] is True
+    invalid = registry.execute("send_sms", {"to": "555", "body": "hello"}, confirmed=True)
+    assert not invalid.ok

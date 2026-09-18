@@ -8,7 +8,7 @@ from .chroma import ChromaIndex
 from .models import AskRequest, AskResponse, GraphEdge, GraphNode, GraphResponse, IndexPathRequest, IndexRequest, MemoryWriteRequest, Personality, ProviderRequest, ToolRequest, ToolResult, VoiceRequest
 from .providers import create_provider
 from .ingest import index_notes
-from .tools import ToolRegistry
+from .tools import ToolRegistry, TwilioSmsProvider, register_builtin_tools
 from .memory import MemoryStore
 
 
@@ -19,6 +19,14 @@ settings.ensure_dirs()
 index = ChromaIndex(settings.chroma_dir)
 provider = create_provider(settings)
 tools = ToolRegistry(settings.allowed_root)
+if settings.sms_provider == "twilio":
+    if not all((settings.twilio_account_sid, settings.twilio_auth_token, settings.twilio_from_number)):
+        raise RuntimeError("SMS_PROVIDER=twilio requires Twilio credentials and TWILIO_FROM_NUMBER")
+    sms_provider = TwilioSmsProvider(settings.twilio_account_sid, settings.twilio_auth_token,
+                                     settings.twilio_from_number)
+else:
+    sms_provider = None
+register_builtin_tools(tools, sms_provider)
 memory_store = MemoryStore(settings.memory_dir)
 conversations: dict[str, list[dict[str, str]]] = {}
 app = FastAPI(title="Personal AI Second Brain", version="0.1.0")

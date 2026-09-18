@@ -16,6 +16,17 @@ class Settings(BaseModel):
     personality_name: str = Field(default_factory=lambda: os.getenv("PERSONALITY_NAME", "Sage"))
     personality_prompt: str = Field(default_factory=lambda: os.getenv(
         "PERSONALITY_PROMPT", "Be thoughtful, concise, and cite memories when useful."))
+    sms_provider: str = Field(default_factory=lambda: os.getenv("SMS_PROVIDER", "mock"))
+    twilio_account_sid: str | None = Field(default_factory=lambda: os.getenv("TWILIO_ACCOUNT_SID"))
+    twilio_auth_token: str | None = Field(default_factory=lambda: os.getenv("TWILIO_AUTH_TOKEN"))
+    twilio_from_number: str | None = Field(default_factory=lambda: os.getenv("TWILIO_FROM_NUMBER"))
+
+    @field_validator("sms_provider")
+    @classmethod
+    def validate_sms_provider(cls, value: str) -> str:
+        if value.lower() not in {"mock", "twilio"}:
+            raise ValueError("sms_provider must be mock or twilio")
+        return value.lower()
 
     @field_validator("provider")
     @classmethod
