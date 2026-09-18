@@ -23,7 +23,7 @@ function drawGraph(data) {
   state.nodes.forEach((node, i) => {
     const a = i / Math.max(state.nodes.length, 1) * Math.PI * 2;
     const r = 1.2 + (i % 5) * .45;
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(.11 + (i % 3) * .025, 16, 12),
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(.18 + (i % 3) * .03, 16, 12),
       new THREE.MeshBasicMaterial({ color: node.kind === 'memory' ? 0x70e8ff : 0xb287ff }));
     mesh.position.set(Math.cos(a) * r, Math.sin(a) * r * .65, (i % 4) * .12);
     mesh.userData = node; positions.set(node.id, mesh.position); graph.add(mesh);
@@ -73,6 +73,13 @@ $('#ask').onclick = ask; $('#query').addEventListener('keydown', e => { if (e.ke
 $('#wake').onchange = () => $('#wake').checked ? startVoice() : stopVoice();
 $('#saveProvider').onclick = async () => { try { const result = await api('/api/provider', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ provider:$('#provider').value, model:$('#model').value }) }); $('#streamState').textContent = `MODEL ACTIVE · ${result.provider}/${result.model}`; } catch (e) { $('#streamState').textContent = `MODEL ERROR · ${e.message}`; } };
 $('#indexNotes').onclick = async () => { $('#indexStatus').textContent = 'Indexing…'; try { const result = await api('/api/index/path', { method:'POST', headers:{'content-type':'application/json'}, body:'{}' }); $('#indexStatus').textContent = `${result.chunks} chunks indexed`; await loadGraph(); } catch (e) { $('#indexStatus').textContent = `Index error: ${e.message}`; } };
-renderer.domElement.addEventListener('pointerdown', event => { pointer.x = (event.clientX / innerWidth) * 2 - 1; pointer.y = -(event.clientY / innerHeight) * 2 + 1; raycaster.setFromCamera(pointer, camera); const hit = raycaster.intersectObjects(graph.children).find(x => x.object.userData?.id); if (hit) focus(hit.object.userData); });
+renderer.domElement.addEventListener('pointerdown', event => {
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(graph.children, true).find(x => x.object.userData?.id);
+  if (hit) focus(hit.object.userData);
+});
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 function animate() { requestAnimationFrame(animate); graph.rotation.y += .0007; renderer.render(scene, camera); } animate(); loadGraph(); loadConfig();
